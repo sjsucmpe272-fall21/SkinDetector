@@ -78,3 +78,27 @@ https://www.kaggle.com/arjunbhasin/credit-card-dataset
 * Database:PostgreSQL
 * Hosting: Amazon Web Services
 
+
+
+## Idea 4 - Crime rate analysis and prediction in Buffalo, NY
+
+### Introduction
+
+Buffalo has crime rate of 4.4 percentage, which is one of the highest crime rates in America. According to the survey of NeighborhoodScout, one in 23 is the chance of being victim of either violent or property crime. Within New York, more than 99% of the communities have a lower crime rate than Buffalo. In fact, Buffalo is included in one of the top 100 most dangerous cities in the U.S.A. It is useful to analyze and predict the possibility of crime and take precautions accordingly.
+
+### Abstract
+
+For particular one city, Buffalo; we can analyze and predict the safety of a person using the dataset of crime incidents in the City of Buffalo. We can visualize the data using **python libraries** like **seaborn** for further usage in finding the safe areas in Buffalo city e.g. visualizations provided can be used by a suggestion panel of crime department to take precautionary actions like allocating resources(menforce, weapons, vehicles, etc) according to crimewise hot zones.
+
+### Approach
+
+We can use **HTML, CSS, React.js** for frontend part through which user can sign up, login and surf the website and the rest can be done using **python**. The provided dataset contains data according to different attributes such as date-time and type of crime, zipcode of area where it happened and all. After data pre-processing, we can make a variety of projections of crimes in map according to attributes. The prediction of crime at particular spot in Buffalo city can be done using predictive analysis algorithm such as classification and regression.
+
+### Persona
+
+Civilians, new comers and travellers to Buffalo can use this site to know the degree and type of threat in one particular area. In this way, users can keep in mind the safety measures.
+
+### Dataset
+
+- https://data.buffalony.gov/Public-Safety/Crime-Incidents-Data-Lens-/vhp3-62vz
+
