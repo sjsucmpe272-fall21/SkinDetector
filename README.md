@@ -1,4 +1,4 @@
-# Team-Project-4
+# Team Project 4
 
 ## Idea 1 - Skin Cancer Detector
 
@@ -27,11 +27,11 @@ Anyone who wishes to check a suspicious mole or skin patch for skin cancer.
 
 ### Introduction
 
-The number of casualties due to car accidents in the USA have been increasing as of late. In 2020 alone, the US saw more than 38,000 cases of car accident related deaths, a 7% increase over the previous year. In order to find solutions for reducing the number of car crashes, it is important to analyze and detect the causes leading to this alarmingly high number of deaths.
+The number of casualties due to car accidents in the USA have been increasing as of late. In 2020 alone, the US saw more than 38,000 cases of car accident-related deaths, a 7% increase over the previous year. In order to find solutions for reducing the number of car crashes, it is important to analyze and detect the causes leading to this alarmingly high number of deaths.
 
 ### Abstract
 
-We propose to help fight the expontentially increasing tally of car-related deaths in the US by garnering insights on the reasons behind the accidents. Understanding the factors leading to a severe car crash is important to make decisions for preventing those crashes, such as awareness campaigns in the badly affected areas or increased law enforcement efforts. Our proposal involves a web application that can accurately predict the severity of a car accident given the conditions leading to it.
+We propose to help fight the exponentially increasing tally of car-related deaths in the US by garnering insights on the reasons behind the accidents. Understanding the factors leading to a severe car crash is important to make decisions for preventing those crashes, such as awareness campaigns in the badly affected areas or increased law enforcement efforts. Our proposal involves a web application that can accurately predict the severity of a car accident given the conditions leading to it.
 
 ### Approach
 
@@ -61,7 +61,7 @@ We aim to implement the user interface in HTML, CSS, React and Bootstrap. We wil
 
 ### Persona
 
-Consumers: Who will signup, login, add card, get credit card history, pay the bills on the Credit Card Management System.
+Consumers: Who will sign up, login, add card, get credit card history, pay the bills on the Credit Card Management System.
 
 ### Datasets
 
@@ -75,15 +75,15 @@ Buffalo has a crime rate of 4.4%, which is one of the highest crime rates in Ame
 
 ### Abstract
 
-For particularly one city, Buffalo, we can analyze and predict the safety of a person using the dataset of crime incidents in the city of Buffalo. We can visualize the data using Python libraries like Seaborn for further usage in finding the safe areas in Buffalo city e.g. visualizations provided can be used by a suggestion panel of crime department to take precautionary actions like allocating resources (police, weapons, vehicles, etc.) according to crimewise hot zones.
+For particularly one city, Buffalo, we can analyze and predict the safety of a person using the dataset of crime incidents in the city of Buffalo. We can visualize the data using Python libraries like Seaborn for further usage in finding the safe areas in Buffalo city e.g. visualizations provided can be used by a suggestion panel of crime department to take precautionary actions like allocating resources (police, weapons, vehicles, etc.) according to crime hot zones.
 
 ### Approach
 
-We can use HTML, CSS, and React for the frontend through which users can sign up, login, and surf the website. The rest can be done using Python. The provided dataset contains data according to different attributes such as date-time, type of crime, and zipcode of the area where it happened. After data pre-processing, we can make a variety of projections of crimes in according to the attributes. The prediction of crime at a particular spot in Buffalo can be done using predictive analysis algorithms such as classification and regression.
+We can use HTML, CSS, and React for the frontend through which users can sign up, login, and surf the website. The rest can be done using Python. The provided dataset contains data according to different attributes such as date-time, type of crime, and zip code of the area where it happened. After data pre-processing, we can make a variety of projections of crimes in according to the attributes. The prediction of crime at a particular spot in Buffalo can be done using predictive analysis algorithms such as classification and regression.
 
 ### Persona
 
-Civilians, newcomers, and travellers to Buffalo can use this site to know the degree and type of threat in one particular area. In this way, users can keep in mind the safety measures.
+Civilians, newcomers, and travelers to Buffalo can use this site to know the degree and type of threat in one particular area. In this way, users can keep in mind the safety measures.
 
 ### Datasets
 
