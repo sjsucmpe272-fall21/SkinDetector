@@ -45,3 +45,36 @@ Public seeking awareness about car-related deaths, businesses looking to develop
 ### Dataset
 
 - https://www.kaggle.com/sobhanmoosavi/us-accidents
+
+
+
+## Idea 3 - Credit Card Management System
+
+### Introduction
+
+As we know, credit card concept is a bit alien to the people who apply for it for the first time. Many people don't know how to order the credit card, usage of credit limits and how to create credit score. Morevoer, paying credit card bills before the statement generation is the most important task to avoid penalties. Our proposal involves a Credit Card Management System which help customer manage their credit cards.
+
+
+### Abstract
+
+Our Credit Card Management System can handle the entire lifecycle of customer’s credit card, it will not only help people gather relevant information about credit card but also adding and verifying credit cards,fetching the credit card statement to generate a summary and extract insights,and making payments for the card, understanding usage pattern and earn rewarn points additional to the ones offered by the bank.
+
+### Approach
+
+We aim to implement the user interface in HTML, CCS, ReactJS and bootstrap which allow user to signup, login, add credit card, delete credit card, get the statement and pay the credit card bills. The backend functionalities will be implemented in Node JS and MySQL will be used to store the user data, card data and credit card history. We will be implementing the API's to manage the user and card functionalities which will be tested through postman and finally this application will be hosted on Amazon Web Services.
+
+### Persona
+Consumers : Who will signup, login, add card, get credit card history, pay the bills on the Credit Card Management System.
+
+### Dataset
+https://www.kaggle.com/arjunbhasin/credit-card-dataset
+
+### Technology Stack
+* Frontend: ReactJS, HTML ,CSS ,Javascript ,Material UI
+* Backend: NodeJs
+* IDE: Visual Studio Code
+* API Testing & Documentation: Postman
+* Version Control: Git
+* Database:PostgreSQL
+* Hosting: Amazon Web Services
+
