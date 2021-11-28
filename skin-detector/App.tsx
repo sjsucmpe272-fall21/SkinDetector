@@ -29,18 +29,8 @@ export default function App() {
     setCapturedImage(photo)
   }
   const __savePhoto = async () => {
-    console.log("Saving the photo", capturedImage.uri);  
-        try {
-            const asset = await MediaLibrary.createAssetAsync(capturedImage.uri);
-            const album = await MediaLibrary.getAlbumAsync('Download');
-        if (album == null) {
-            await MediaLibrary.createAlbumAsync('Download', asset, false);
-        } else {
-            await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-        }
-        } catch (e) {
-            console.log(e);
-        }
+    console.log("Saving the photo", capturedImage.uri);
+    await MediaLibrary.saveToLibraryAsync(capturedImage.uri);  
   }
   const __retakePicture = () => {
     setCapturedImage(null)
