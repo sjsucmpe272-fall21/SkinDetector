@@ -1,240 +1,325 @@
-import {StatusBar} from 'expo-status-bar'
-import React from 'react'
-import {StyleSheet, Text, View, TouchableOpacity, Alert, ImageBackground, Image} from 'react-native'
-import {Camera} from 'expo-camera'
-import * as MediaLibrary from 'expo-media-library';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Alert,
+  ImageBackground,
+  Image,
+  BackHandler,
+} from "react-native";
+import * as tf from "@tensorflow/tfjs";
+import { decodeJpeg, bundleResourceIO } from "@tensorflow/tfjs-react-native";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import { Camera } from "expo-camera";
+import * as MediaLibrary from "expo-media-library";
+import { StatusBar } from "expo-status-bar";
 
-let camera: Camera
 export default function App() {
-  const [startCamera, setStartCamera] = React.useState(false)
-  const [previewVisible, setPreviewVisible] = React.useState(false)
-  const [capturedImage, setCapturedImage] = React.useState<any>(null)
-  const [cameraType, setCameraType] = React.useState(Camera.Constants.Type.back)
-  const [flashMode, setFlashMode] = React.useState('off')
+  const [isTfReady, setIsTfReady] = useState(false);
+  const [binaryModel, setBinaryModel] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [malignantProb, setMalignantProb] = useState(0);
+  const cameraRef = useRef(null);
+  const [isCamera, setIsCamera] = useState(false);
+  const [cameraType, setCameraType] = useState(Camera.Constants.Type.back);
+  const [flashMode, setFlashMode] = useState(Camera.Constants.FlashMode.off);
+  const [isPreview, setIsPreview] = useState(false);
+  const [pictureUri, setPictureUri] = useState(null);
 
-  const __startCamera = async () => {
-    const {status} = await Camera.requestCameraPermissionsAsync()
-    console.log(status)
-    if (status === 'granted') {
-      setStartCamera(true)
-    } else {
-      Alert.alert('Access denied')
+  useEffect(() => {
+    loadTf();
+  }, []);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        if (isCamera) {
+          setIsCamera(false);
+          return true;
+        } else if (isPreview) {
+          retakePicture();
+          return true;
+        }
+        return false;
+      }
+    );
+    return () => backHandler.remove();
+  });
+
+  const loadTf = async () => {
+    await tf.ready();
+    const modelWeights = require("./assets/models/binary_melanoma/binary_melanoma.bin");
+    const modelJson = require("./assets/models/binary_melanoma/binary_melanoma.json");
+    const model = await tf.loadGraphModel(
+      bundleResourceIO(modelJson, modelWeights)
+    );
+    setBinaryModel(model);
+    setIsTfReady(true);
+  };
+
+  const openImagePicker = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Error!", "Media access required.");
+      return;
     }
-  }
-  const __takePicture = async () => {
-    const photo: any = await camera.takePictureAsync()
-    console.log(photo)
-    setPreviewVisible(true)
-    //setStartCamera(false)
-    setCapturedImage(photo)
-  }
-  const __savePhoto = async () => {
-    console.log("Saving the photo", capturedImage.uri);
-    await MediaLibrary.saveToLibraryAsync(capturedImage.uri);  
-  }
-  const __retakePicture = () => {
-    setCapturedImage(null)
-    setPreviewVisible(false)
-    __startCamera()
-  }
-  const __handleFlashMode = () => {
-    if (flashMode === 'on') {
-      setFlashMode('off')
-    } else if (flashMode === 'off') {
-      setFlashMode('on')
-    } else {
-      setFlashMode('auto')
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync();
+    if (pickerResult.cancelled === true) {
+      return;
     }
-  }
-  const __switchCamera = () => {
-    if (cameraType === 'back') {
-      setCameraType(Camera.Constants.Type.front)
+
+    setPictureUri(pickerResult.uri);
+    processPicture(pickerResult.uri);
+  };
+
+  const openCamera = async () => {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    if (status === "granted") {
+      setIsCamera(true);
     } else {
-      setCameraType(Camera.Constants.Type.back)
+      Alert.alert("Error!", "Camera access required.");
     }
+  };
+
+  const toggleCameraType = () => {
+    setCameraType(
+      cameraType === Camera.Constants.Type.back
+        ? Camera.Constants.Type.front
+        : Camera.Constants.Type.back
+    );
+  };
+
+  const toggleFlashMode = () => {
+    setFlashMode(
+      flashMode === Camera.Constants.FlashMode.off
+        ? Camera.Constants.FlashMode.on
+        : Camera.Constants.FlashMode.off
+    );
+  };
+
+  const takePicture = async () => {
+    const picture = await cameraRef.current.takePictureAsync();
+    setPictureUri(picture.uri);
+    setIsCamera(false);
+    setIsPreview(true);
+  };
+
+  const retakePicture = () => {
+    setPictureUri(null);
+    setIsPreview(false);
+    openCamera();
+  };
+
+  const processPicture = async (uri) => {
+    setIsPreview(false);
+    setIsProcessing(true);
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const buffer = tf.util.encodeString(base64, "base64").buffer;
+    const raw = new Uint8Array(buffer);
+    const tensor = decodeJpeg(raw).resizeBilinear([160, 160]).expandDims(0);
+    const predTensor = binaryModel.predict(tensor) as tf.Tensor;
+    const pred = 1.0 / (1.0 + Math.exp(-predTensor.dataSync()[0]));
+    setMalignantProb(pred);
+    setIsProcessing(false);
+  };
+
+  const savePicture = async () => {
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status === "granted") {
+      await MediaLibrary.saveToLibraryAsync(pictureUri);
+      Alert.alert("Success!", "Your picture has been saved to your gallery.");
+    } else {
+      Alert.alert("Error!", "Media access required.");
+    }
+  };
+
+  if (!isTfReady) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
   }
-  return (
-    <View style={styles.container}>
-      {startCamera ? (
-        <View
-          style={{
-            flex: 1,
-            width: '100%'
-          }}
-        >
-          {previewVisible && capturedImage ? (
-            <CameraPreview photo={capturedImage} savePhoto={__savePhoto} retakePicture={__retakePicture} />
-          ) : (
-            <Camera
-              type={cameraType}
-              style={{flex: 1}}
-              ref={(r) => {
-                camera = r
-              }}
-            >
-              <View
-                style={{
-                  flex: 1,
-                  width: '100%',
-                  backgroundColor: 'transparent',
-                  flexDirection: 'row'
-                }}
-              >
-                
-                <View
-                  style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    flexDirection: 'row',
-                    flex: 1,
-                    width: '100%',
-                    padding: 20,
-                    justifyContent: 'space-between'
-                  }}
-                >
-                  <View
-                    style={{
-                      alignSelf: 'center',
-                      flex: 1,
-                      alignItems: 'center'
-                    }}
-                  >
-                    <TouchableOpacity
-                      onPress={__takePicture}
-                      style={{
-                        width: 70,
-                        height: 70,
-                        bottom: 0,
-                        borderRadius: 50,
-                        backgroundColor: '#fff'
-                      }}
-                    />
-                  </View>
-                </View>
-              </View>
-            </Camera>
-          )}
-        </View>
-      ) : (
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: '#fff',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}
-        >
+
+  if (isCamera) {
+    return (
+      <Camera
+        type={cameraType}
+        flashMode={flashMode}
+        style={styles.camera}
+        ref={cameraRef}
+      >
+        <View style={styles.cameraControls}>
           <TouchableOpacity
-            onPress={__startCamera}
-            style={{
-              width: 130,
-              borderRadius: 4,
-              backgroundColor: '#14274e',
-              flexDirection: 'row',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: 40
-            }}
+            onPress={toggleCameraType}
+            style={styles.cameraControlContainer}
           >
-            <Text
-              style={{
-                color: '#fff',
-                fontWeight: 'bold',
-                textAlign: 'center'
-              }}
-            >
-              Take picture
+            <Text style={styles.cameraControlText}>Flip</Text>
+          </TouchableOpacity>
+          <View style={styles.cameraControlContainer}>
+            <TouchableOpacity
+              onPress={takePicture}
+              style={styles.takePictureButton}
+            />
+          </View>
+          <TouchableOpacity
+            onPress={toggleFlashMode}
+            style={styles.cameraControlContainer}
+          >
+            <Text style={styles.cameraControlText}>
+              Flash:{" "}
+              {flashMode === Camera.Constants.FlashMode.off ? "off" : "on"}
             </Text>
           </TouchableOpacity>
         </View>
-      )}
+      </Camera>
+    );
+  }
 
+  if (isPreview) {
+    return (
+      <ImageBackground
+        source={{ uri: pictureUri }}
+        style={styles.cameraPreview}
+      >
+        <View style={styles.cameraControls}>
+          <TouchableOpacity
+            onPress={retakePicture}
+            style={styles.cameraControlContainer}
+          >
+            <Text style={styles.cameraControlText}>Re-take</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => processPicture(pictureUri)}
+            style={styles.cameraControlContainer}
+          >
+            <Text style={styles.cameraControlText}>Process</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={savePicture}
+            style={styles.cameraControlContainer}
+          >
+            <Text style={styles.cameraControlText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      </ImageBackground>
+    );
+  }
+
+  if (isProcessing) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Processing...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Text style={styles.title}>Skin Detector</Text>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity onPress={openImagePicker} style={styles.button}>
+            <Text style={styles.buttonText}>Select picture</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={openCamera} style={styles.button}>
+            <Text style={styles.buttonText}>Take picture</Text>
+          </TouchableOpacity>
+        </View>
+        {pictureUri !== null && (
+          <React.Fragment>
+            <Text style={styles.resultText}>
+              Malignant probability: {(malignantProb * 100).toFixed(2)}%
+            </Text>
+            <Image source={{ uri: pictureUri }} style={styles.picture} />
+          </React.Fragment>
+        )}
+      </View>
       <StatusBar style="auto" />
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center'
-  }
-})
-
-const CameraPreview = ({photo, retakePicture, savePhoto}: any) => {
-  console.log('sdsfds', photo)
-  return (
-    <View
-      style={{
-        backgroundColor: 'transparent',
-        flex: 1,
-        width: '100%',
-        height: '100%'
-      }}
-    >
-      <ImageBackground
-        source={{uri: photo && photo.uri}}
-        style={{
-          flex: 1
-        }}
-      >
-        <View
-          style={{
-            flex: 1,
-            flexDirection: 'column',
-            padding: 15,
-            justifyContent: 'flex-end'
-          }}
-        >
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between'
-            }}
-          >
-            <TouchableOpacity
-              onPress={retakePicture}
-              style={{
-                width: 130,
-                height: 40,
-
-                alignItems: 'center',
-                borderRadius: 4
-              }}
-            >
-              <Text
-                style={{
-                  color: '#fff',
-                  fontSize: 20
-                }}
-              >
-                Re-take
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={savePhoto}
-              style={{
-                width: 130,
-                height: 40,
-
-                alignItems: 'center',
-                borderRadius: 4
-              }}
-            >
-              <Text
-                style={{
-                  color: '#fff',
-                  fontSize: 20
-                }}
-              >
-                save photo
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ImageBackground>
-    </View>
-  )
-}
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 40,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    width: "100%",
+  },
+  button: {
+    width: 150,
+    height: 50,
+    borderRadius: 4,
+    backgroundColor: "#14274e",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  resultText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 50,
+  },
+  picture: {
+    width: 300,
+    height: 300,
+    marginTop: 20,
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraControls: {
+    position: "absolute",
+    bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 20,
+  },
+  cameraControlContainer: {
+    flex: 1,
+    alignItems: "center",
+  },
+  cameraControlText: {
+    color: "#fff",
+    fontSize: 20,
+  },
+  takePictureButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 50,
+    backgroundColor: "#fff",
+  },
+  cameraPreview: {
+    flex: 1,
+  },
+  loadingText: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+});
