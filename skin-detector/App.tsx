@@ -17,11 +17,24 @@ import { Camera } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
 import { StatusBar } from "expo-status-bar";
 
+const CLASSES = [
+  "Melanoma",
+  "Basal Cell Carcinoma",
+  "Melanocytic Nevus",
+  "Actinic Keratosis",
+  "Benign Keratosis",
+  "Vascular Lesions",
+  "Dermatofibroma",
+];
+
 export default function App() {
   const [isTfReady, setIsTfReady] = useState(false);
   const [binaryModel, setBinaryModel] = useState(null);
+  const [multiclass1Model, setMulticlass1Model] = useState(null);
+  const [multiclass2Model, setMulticlass2Model] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [malignantProb, setMalignantProb] = useState(0);
+  const [multiclassProbs, setMulticlassProbs] = useState(null);
   const cameraRef = useRef(null);
   const [isCamera, setIsCamera] = useState(false);
   const [cameraType, setCameraType] = useState(Camera.Constants.Type.back);
@@ -52,12 +65,31 @@ export default function App() {
 
   const loadTf = async () => {
     await tf.ready();
-    const modelWeights = require("./assets/models/binary_melanoma/binary_melanoma.bin");
-    const modelJson = require("./assets/models/binary_melanoma/binary_melanoma.json");
-    const model = await tf.loadGraphModel(
-      bundleResourceIO(modelJson, modelWeights)
+
+    // Binary
+    const binaryJson = require("./assets/models/binary_melanoma.json");
+    const binaryWeights = require("./assets/models/binary_melanoma.bin");
+    const binaryModel = await tf.loadGraphModel(
+      bundleResourceIO(binaryJson, binaryWeights)
     );
-    setBinaryModel(model);
+    setBinaryModel(binaryModel);
+
+    // Multiclass 1
+    const multiclass1Json = require("./assets/models/multiclass1.json");
+    const multiclass1Weights = require("./assets/models/multiclass1.bin");
+    const multiclass1Model = await tf.loadLayersModel(
+      bundleResourceIO(multiclass1Json, multiclass1Weights)
+    );
+    setMulticlass1Model(multiclass1Model);
+
+    // Multiclass 2
+    const multiclass2Json = require("./assets/models/multiclass2.json");
+    const multiclass2Weights = require("./assets/models/multiclass2.bin");
+    const multiclass2Model = await tf.loadLayersModel(
+      bundleResourceIO(multiclass2Json, multiclass2Weights)
+    );
+    setMulticlass2Model(multiclass2Model);
+
     setIsTfReady(true);
   };
 
@@ -118,15 +150,84 @@ export default function App() {
   const processPicture = async (uri) => {
     setIsPreview(false);
     setIsProcessing(true);
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    const buffer = tf.util.encodeString(base64, "base64").buffer;
-    const raw = new Uint8Array(buffer);
-    const tensor = decodeJpeg(raw).resizeBilinear([160, 160]).expandDims(0);
-    const predTensor = binaryModel.predict(tensor) as tf.Tensor;
-    const pred = 1.0 / (1.0 + Math.exp(-predTensor.dataSync()[0]));
-    setMalignantProb(pred);
+
+    try {
+      tf.engine().startScope();
+
+      // Picture
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const buffer = tf.util.encodeString(base64, "base64").buffer;
+      const raw = new Uint8Array(buffer);
+      const decoded = decodeJpeg(raw);
+
+      // Binary
+      const binaryTensor = decoded.resizeBilinear([160, 160]).expandDims(0);
+      const binaryPredTensor = binaryModel.predict(binaryTensor) as tf.Tensor;
+      const binaryPred =
+        1.0 / (1.0 + Math.exp(-binaryPredTensor.dataSync()[0]));
+      setMalignantProb(binaryPred);
+
+      // Multiclass 1
+      const multiclass1Tensor = decoded
+        .resizeBilinear([224, 224])
+        .expandDims(0);
+      const multiclass1PredTensor = multiclass1Model.predict(
+        multiclass1Tensor
+      ) as tf.Tensor;
+      const multiclass1Pred = multiclass1PredTensor.dataSync();
+
+      // Multiclass 2
+      const multiclass2Tensor = decoded
+        .resizeBilinear([224, 224])
+        .expandDims(0);
+      const multiclass2PredTensor = multiclass2Model.predict(
+        multiclass2Tensor
+      ) as tf.Tensor;
+      const multiclass2Pred = multiclass2PredTensor.dataSync();
+
+      // Weighted averge ensemble
+      const multiclassProbs = [];
+      multiclassProbs.push(
+        0.25 * multiclass1Pred[4] + 0.75 * multiclass2Pred[1]
+      );
+      multiclassProbs.push(
+        0.25 * multiclass1Pred[1] + 0.75 * multiclass2Pred[2]
+      );
+      multiclassProbs.push(
+        0.25 * multiclass1Pred[5] + 0.75 * multiclass2Pred[0]
+      );
+      multiclassProbs.push(
+        0.25 * multiclass1Pred[0] + 0.75 * multiclass2Pred[3]
+      );
+      multiclassProbs.push(
+        0.25 * multiclass1Pred[2] + 0.75 * multiclass2Pred[5]
+      );
+      multiclassProbs.push(
+        0.25 * multiclass1Pred[6] + 0.75 * multiclass2Pred[4]
+      );
+      multiclassProbs.push(
+        0.25 * multiclass1Pred[3] + 0.75 * multiclass2Pred[6]
+      );
+      let softmaxTotal = 0;
+      for (const avg of multiclassProbs) {
+        softmaxTotal += avg;
+      }
+      for (let i = 0; i < multiclassProbs.length; i++) {
+        multiclassProbs[i] = multiclassProbs[i] / softmaxTotal;
+      }
+      setMulticlassProbs(multiclassProbs);
+
+      tf.engine().endScope();
+    } catch (error) {
+      setPictureUri(null);
+      Alert.alert(
+        "Error!",
+        "Something went wrong. This might be due to an unsupported image format."
+      );
+    }
+
     setIsProcessing(false);
   };
 
@@ -138,6 +239,10 @@ export default function App() {
     } else {
       Alert.alert("Error!", "Media access required.");
     }
+  };
+
+  const toFixedProb = (prob) => {
+    return (prob * 100).toFixed(2);
   };
 
   if (!isTfReady) {
@@ -239,12 +344,17 @@ export default function App() {
             <Text style={styles.buttonText}>Take picture</Text>
           </TouchableOpacity>
         </View>
-        {pictureUri !== null && (
+        {pictureUri !== null && multiclassProbs !== null && (
           <React.Fragment>
             <Text style={styles.resultText}>
-              Malignant probability: {(malignantProb * 100).toFixed(2)}%
+              Malignant probability: {toFixedProb(malignantProb)}%
             </Text>
             <Image source={{ uri: pictureUri }} style={styles.picture} />
+            {multiclassProbs.map((prob, idx) => (
+              <Text key={`class-${idx}`}>
+                {CLASSES[idx]}: {toFixedProb(multiclassProbs[idx])}%
+              </Text>
+            ))}
           </React.Fragment>
         )}
       </View>
@@ -290,6 +400,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     marginTop: 20,
+    marginBottom: 20,
   },
   camera: {
     flex: 1,
