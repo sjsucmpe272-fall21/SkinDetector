@@ -27,6 +27,16 @@ const CLASSES = [
   "Dermatofibroma",
 ];
 
+const DESCRIPTIONS = [
+  "The most serious type of skin cancer.",
+  "A type of skin cancer that begins in the basal cells.",
+  "A usually noncancerous disorder of pigment-producing skin cells commonly called birth marks or moles.",
+  "A rough, scaly patch on the skin caused by years of sun exposure.",
+  "A noncancerous skin condition that appears as a waxy brown, black, or tan growth.",
+  "Relatively common abnormalities of the skin and underlying tissues, more commonly known as birthmarks.",
+  "A common benign fibrous nodule usually found on the skin of the lower legs.",
+];
+
 export default function App() {
   const [isTfReady, setIsTfReady] = useState(false);
   const [binaryModel, setBinaryModel] = useState(null);
@@ -221,11 +231,9 @@ export default function App() {
 
       tf.engine().endScope();
     } catch (error) {
+      console.error(error);
       setPictureUri(null);
-      Alert.alert(
-        "Error!",
-        "Something went wrong. This might be due to an unsupported image format."
-      );
+      Alert.alert("Error!", "Something went wrong, please try again.");
     }
 
     setIsProcessing(false);
@@ -336,6 +344,9 @@ export default function App() {
         }}
       >
         <Text style={styles.title}>Skin Detector</Text>
+        <Text style={styles.subtitle}>
+          Detect skin conditions quick and easy
+        </Text>
         <View style={styles.buttonRow}>
           <TouchableOpacity onPress={openImagePicker} style={styles.button}>
             <Text style={styles.buttonText}>Select picture</Text>
@@ -346,13 +357,29 @@ export default function App() {
         </View>
         {pictureUri !== null && multiclassProbs !== null && (
           <React.Fragment>
-            <Text style={styles.resultText}>
-              Malignant probability: {toFixedProb(malignantProb)}%
-            </Text>
             <Image source={{ uri: pictureUri }} style={styles.picture} />
+            <Text
+              style={styles.resultText}
+              onPress={() =>
+                Alert.alert(
+                  "Malignant",
+                  "This is the probability that the skin condition is harmful or cancerous."
+                )
+              }
+            >
+              Malignant: {toFixedProb(malignantProb)}%
+            </Text>
             {multiclassProbs.map((prob, idx) => (
-              <Text key={`class-${idx}`}>
-                {CLASSES[idx]}: {toFixedProb(multiclassProbs[idx])}%
+              <Text
+                key={`class-${idx}`}
+                style={
+                  prob === Math.max(...multiclassProbs)
+                    ? styles.boldText
+                    : styles.normalText
+                }
+                onPress={() => Alert.alert(CLASSES[idx], DESCRIPTIONS[idx])}
+              >
+                {CLASSES[idx]}: {toFixedProb(prob)}%
               </Text>
             ))}
           </React.Fragment>
@@ -371,6 +398,10 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 40,
+    fontWeight: "bold",
+  },
+  subtitle: {
+    fontSize: 20,
     fontWeight: "bold",
     marginBottom: 20,
   },
@@ -391,16 +422,19 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-  resultText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginTop: 50,
-  },
   picture: {
     width: 300,
     height: 300,
     marginTop: 20,
     marginBottom: 20,
+    borderWidth: 3,
+    borderColor: "#14274e",
+    borderRadius: 4,
+  },
+  resultText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
   },
   camera: {
     flex: 1,
@@ -432,5 +466,11 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 20,
     fontWeight: "bold",
+  },
+  boldText: {
+    fontWeight: "bold",
+  },
+  normalText: {
+    fontWeight: "normal",
   },
 });
