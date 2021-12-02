@@ -93,8 +93,27 @@ export default function App() {
     setMulticlass1Model(multiclass1Model);
 
     // Multiclass 2
-    const multiclass2Json = require("./assets/models/multiclass2.json");
-    const multiclass2Weights = require("./assets/models/multiclass2.bin");
+    const multiclass2Json = require("./assets/models/multiclass2/multiclass2.json");
+    const multiclass2Weights = [
+      require("./assets/models/multiclass2/multiclass2-shard1of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard2of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard3of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard4of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard5of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard6of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard7of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard8of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard9of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard10of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard11of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard12of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard13of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard14of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard15of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard16of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard17of18.bin"),
+      require("./assets/models/multiclass2/multiclass2-shard18of18.bin"),
+    ];
     const multiclass2Model = await tf.loadLayersModel(
       bundleResourceIO(multiclass2Json, multiclass2Weights)
     );
