@@ -66,8 +66,7 @@ const MODAL_DATA = [
 export default function App() {
   const [isTfReady, setIsTfReady] = useState(false);
   const [binaryModel, setBinaryModel] = useState(null);
-  const [multiclass1Model, setMulticlass1Model] = useState(null);
-  const [multiclass2Model, setMulticlass2Model] = useState(null);
+  const [multiclassModel, setMulticlassModel] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [malignantProb, setMalignantProb] = useState(0);
   const [multiclassProbs, setMulticlassProbs] = useState(null);
@@ -107,47 +106,20 @@ export default function App() {
     await tf.ready();
 
     // Binary
-    const binaryJson = require("./assets/models/binary_melanoma.json");
-    const binaryWeights = require("./assets/models/binary_melanoma.bin");
+    const binaryJson = require("./assets/models/binary_model.json");
+    const binaryWeights = require("./assets/models/binary_model.bin");
     const binaryModel = await tf.loadGraphModel(
       bundleResourceIO(binaryJson, binaryWeights)
     );
     setBinaryModel(binaryModel);
 
-    // Multiclass 1
-    const multiclass1Json = require("./assets/models/multiclass1.json");
-    const multiclass1Weights = require("./assets/models/multiclass1.bin");
-    const multiclass1Model = await tf.loadLayersModel(
-      bundleResourceIO(multiclass1Json, multiclass1Weights)
+    // Multiclass
+    const multiclassJson = require("./assets/models/multiclass_model.json");
+    const multiclassWeights = require("./assets/models/multiclass_model.bin");
+    const multiclassModel = await tf.loadLayersModel(
+      bundleResourceIO(multiclassJson, multiclassWeights)
     );
-    setMulticlass1Model(multiclass1Model);
-
-    // Multiclass 2
-    const multiclass2Json = require("./assets/models/multiclass2/multiclass2.json");
-    const multiclass2Weights = [
-      require("./assets/models/multiclass2/multiclass2-shard1of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard2of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard3of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard4of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard5of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard6of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard7of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard8of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard9of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard10of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard11of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard12of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard13of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard14of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard15of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard16of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard17of18.bin"),
-      require("./assets/models/multiclass2/multiclass2-shard18of18.bin"),
-    ];
-    const multiclass2Model = await tf.loadLayersModel(
-      bundleResourceIO(multiclass2Json, multiclass2Weights)
-    );
-    setMulticlass2Model(multiclass2Model);
+    setMulticlassModel(multiclassModel);
 
     setIsTfReady(true);
   };
@@ -228,55 +200,24 @@ export default function App() {
         1.0 / (1.0 + Math.exp(-binaryPredTensor.dataSync()[0]));
       setMalignantProb(binaryPred);
 
-      // Multiclass 1
-      const multiclass1Tensor = decoded
-        .resizeBilinear([224, 224])
+      // Multiclass
+      const multiclassTensor = decoded
+        .resizeBilinear([32, 32])
+        .div(tf.scalar(255))
         .expandDims(0);
-      const multiclass1PredTensor = multiclass1Model.predict(
-        multiclass1Tensor
+      const multiclassPredTensor = multiclassModel.predict(
+        multiclassTensor
       ) as tf.Tensor;
-      const multiclass1Pred = multiclass1PredTensor.dataSync();
-
-      // Multiclass 2
-      const multiclass2Tensor = decoded
-        .resizeBilinear([224, 224])
-        .expandDims(0);
-      const multiclass2PredTensor = multiclass2Model.predict(
-        multiclass2Tensor
-      ) as tf.Tensor;
-      const multiclass2Pred = multiclass2PredTensor.dataSync();
-
-      // Weighted averge ensemble
-      const multiclassProbs = [];
-      multiclassProbs.push(
-        0.25 * multiclass1Pred[4] + 0.75 * multiclass2Pred[1]
-      );
-      multiclassProbs.push(
-        0.25 * multiclass1Pred[1] + 0.75 * multiclass2Pred[2]
-      );
-      multiclassProbs.push(
-        0.25 * multiclass1Pred[5] + 0.75 * multiclass2Pred[0]
-      );
-      multiclassProbs.push(
-        0.25 * multiclass1Pred[0] + 0.75 * multiclass2Pred[3]
-      );
-      multiclassProbs.push(
-        0.25 * multiclass1Pred[2] + 0.75 * multiclass2Pred[5]
-      );
-      multiclassProbs.push(
-        0.25 * multiclass1Pred[6] + 0.75 * multiclass2Pred[4]
-      );
-      multiclassProbs.push(
-        0.25 * multiclass1Pred[3] + 0.75 * multiclass2Pred[6]
-      );
-      let softmaxTotal = 0;
-      for (const avg of multiclassProbs) {
-        softmaxTotal += avg;
-      }
-      for (let i = 0; i < multiclassProbs.length; i++) {
-        multiclassProbs[i] = multiclassProbs[i] / softmaxTotal;
-      }
-      setMulticlassProbs(multiclassProbs);
+      const multiclassPred = multiclassPredTensor.dataSync();
+      setMulticlassProbs([
+        multiclassPred[4],
+        multiclassPred[1],
+        multiclassPred[5],
+        multiclassPred[0],
+        multiclassPred[2],
+        multiclassPred[6],
+        multiclassPred[3],
+      ]);
 
       tf.engine().endScope();
     } catch (error) {
