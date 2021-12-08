@@ -8,6 +8,8 @@ import {
   ImageBackground,
   Image,
   BackHandler,
+  Modal,
+  Linking,
 } from "react-native";
 import * as tf from "@tensorflow/tfjs";
 import { decodeJpeg, bundleResourceIO } from "@tensorflow/tfjs-react-native";
@@ -17,24 +19,47 @@ import { Camera } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
 import { StatusBar } from "expo-status-bar";
 
-const CLASSES = [
-  "Melanoma",
-  "Basal Cell Carcinoma",
-  "Melanocytic Nevus",
-  "Actinic Keratosis",
-  "Benign Keratosis",
-  "Vascular Lesions",
-  "Dermatofibroma",
-];
-
-const DESCRIPTIONS = [
-  "The most serious type of skin cancer.",
-  "A type of skin cancer that begins in the basal cells.",
-  "A usually noncancerous disorder of pigment-producing skin cells commonly called birth marks or moles.",
-  "A rough, scaly patch on the skin caused by years of sun exposure.",
-  "A noncancerous skin condition that appears as a waxy brown, black, or tan growth.",
-  "Relatively common abnormalities of the skin and underlying tissues, more commonly known as birthmarks.",
-  "A common benign fibrous nodule usually found on the skin of the lower legs.",
+const MODAL_DATA = [
+  [
+    "Malignancy",
+    "This is the probability that the skin condition is harmful or cancerous.",
+    "https://en.wikipedia.org/wiki/Malignancy",
+  ],
+  [
+    "Melanoma",
+    "The most serious type of skin cancer.",
+    "https://en.wikipedia.org/wiki/Melanoma",
+  ],
+  [
+    "Basal Cell Carcinoma",
+    "A type of skin cancer that begins in the basal cells.",
+    "https://en.wikipedia.org/wiki/Basal-cell_carcinoma",
+  ],
+  [
+    "Melanocytic Nevus",
+    "A usually noncancerous disorder of pigment-producing skin cells commonly called birth marks or moles.",
+    "https://en.wikipedia.org/wiki/Melanocytic_nevus",
+  ],
+  [
+    "Actinic Keratosis",
+    "A rough, scaly patch on the skin caused by years of sun exposure.",
+    "https://en.wikipedia.org/wiki/Actinic_keratosis",
+  ],
+  [
+    "Benign Keratosis",
+    "A noncancerous skin condition that appears as a waxy brown, black, or tan growth.",
+    "https://en.wikipedia.org/wiki/Seborrheic_keratosis",
+  ],
+  [
+    "Vascular Lesions",
+    "Relatively common abnormalities of the skin and underlying tissues, more commonly known as birthmarks.",
+    "https://en.wikipedia.org/wiki/Skin_condition",
+  ],
+  [
+    "Dermatofibroma",
+    "A common benign fibrous nodule usually found on the skin of the lower legs.",
+    "https://en.wikipedia.org/wiki/Dermatofibroma",
+  ],
 ];
 
 export default function App() {
@@ -51,6 +76,10 @@ export default function App() {
   const [flashMode, setFlashMode] = useState(Camera.Constants.FlashMode.off);
   const [isPreview, setIsPreview] = useState(false);
   const [pictureUri, setPictureUri] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalDescription, setModalDescription] = useState("");
+  const [modalLink, setModalLink] = useState("");
 
   useEffect(() => {
     loadTf();
@@ -280,6 +309,14 @@ export default function App() {
     );
   }
 
+  const showModal = (modalData) => {
+    const [title, description, link] = modalData;
+    setModalTitle(title);
+    setModalDescription(description);
+    setModalLink(link);
+    setIsModalVisible(true);
+  };
+
   if (isCamera) {
     return (
       <Camera
@@ -355,6 +392,33 @@ export default function App() {
 
   return (
     <View style={styles.container}>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => {
+          setIsModalVisible(false);
+        }}
+      >
+        <View style={styles.outerModal}>
+          <View style={styles.innerModal}>
+            <Text style={styles.modalTitle}>{modalTitle}</Text>
+            <Text style={styles.modalDescription}>{modalDescription}</Text>
+            <Text
+              style={styles.modalLink}
+              onPress={() => Linking.openURL(modalLink)}
+            >
+              Learn more
+            </Text>
+            <TouchableOpacity
+              onPress={() => setIsModalVisible(false)}
+              style={styles.button}
+            >
+              <Text style={styles.buttonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <View
         style={{
           flex: 1,
@@ -379,12 +443,7 @@ export default function App() {
             <Image source={{ uri: pictureUri }} style={styles.picture} />
             <Text
               style={styles.resultText}
-              onPress={() =>
-                Alert.alert(
-                  "Malignant",
-                  "This is the probability that the skin condition is harmful or cancerous."
-                )
-              }
+              onPress={() => showModal(MODAL_DATA[0])}
             >
               Malignant: {toFixedProb(malignantProb)}%
             </Text>
@@ -396,9 +455,9 @@ export default function App() {
                     ? styles.boldText
                     : styles.normalText
                 }
-                onPress={() => Alert.alert(CLASSES[idx], DESCRIPTIONS[idx])}
+                onPress={() => showModal(MODAL_DATA[idx + 1])}
               >
-                {CLASSES[idx]}: {toFixedProb(prob)}%
+                {MODAL_DATA[idx + 1][0]}: {toFixedProb(prob)}%
               </Text>
             ))}
           </React.Fragment>
@@ -491,5 +550,37 @@ const styles = StyleSheet.create({
   },
   normalText: {
     fontWeight: "normal",
+  },
+  outerModal: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  innerModal: {
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  modalDescription: {
+    marginBottom: 10,
+  },
+  modalLink: {
+    color: "blue",
+    marginBottom: 10,
   },
 });
