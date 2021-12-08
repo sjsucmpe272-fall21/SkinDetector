@@ -1,6 +1,6 @@
 # Team Project 4
 
-## Skin Cancer Detector
+## Skin Detector
 
 ### Introduction
 
