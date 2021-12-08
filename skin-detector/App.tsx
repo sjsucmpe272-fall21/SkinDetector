@@ -10,6 +10,7 @@ import {
   BackHandler,
   Modal,
   Linking,
+  ActivityIndicator,
 } from "react-native";
 import * as tf from "@tensorflow/tfjs";
 import { decodeJpeg, bundleResourceIO } from "@tensorflow/tfjs-react-native";
@@ -304,7 +305,8 @@ export default function App() {
   if (!isTfReady) {
     return (
       <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>Loading</Text>
+        <ActivityIndicator size="large" color="#14274e" />
       </View>
     );
   }
@@ -385,7 +387,8 @@ export default function App() {
   if (isProcessing) {
     return (
       <View style={styles.container}>
-        <Text style={styles.loadingText}>Processing...</Text>
+        <Text style={styles.loadingText}>Processing</Text>
+        <ActivityIndicator size="large" color="#14274e" />
       </View>
     );
   }
@@ -544,6 +547,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 20,
     fontWeight: "bold",
+    marginBottom: 10,
   },
   boldText: {
     fontWeight: "bold",
