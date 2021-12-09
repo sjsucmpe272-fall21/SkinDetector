@@ -22,3 +22,7 @@ Anyone who wishes to check a suspicious mole or skin patch for skin cancer.
 
 - https://www.kaggle.com/datasets?search=skin+cancer
 - https://www.kaggle.com/datasets?search=melanoma
+
+### Download
+
+https://expo.dev/@skin-detector/skin-detector
